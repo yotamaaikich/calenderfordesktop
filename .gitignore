@@ -1,0 +1,6 @@
+**/node_modules/
+teams-calendar-app/.winapp/
+teams-calendar-app/runtime/
+teams-calendar-app/logs/
+teams-calendar-app/work-*.log
+work/
