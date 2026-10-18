@@ -37,6 +37,12 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ items, latest: notifications.at(-1)?.sequence || after }));
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/api/open-calendar') {
+    openCalendar();
+    res.writeHead(204, { 'cache-control': 'no-store' });
+    res.end();
+    return;
+  }
   if (url.pathname === '/api/calendar' && req.method === 'GET') {
     res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
     res.end(JSON.stringify(readCalendar()));
