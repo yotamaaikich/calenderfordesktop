@@ -32,19 +32,25 @@ function reportError(error) {
   parentPort.postMessage({ type: 'error', message: error?.stack || String(error) });
 }
 
-function isTeams(appInfo) {
+function notificationSource(appInfo) {
   try {
     const name = appInfo?.displayInfo?.displayName || '';
     const id = appInfo?.appUserModelId || '';
-    return /teams/i.test(`${name} ${id}`) || /^Chrome\._crx_ompifglnodjjndh(?:\.|$)/i.test(id);
-  } catch { return false; }
+    if (/teams/i.test(`${name} ${id}`) || /^Chrome\._crx_ompifglnodjjndh(?:\.|$)/i.test(id)) return 'Teams';
+    // Chrome's generic app identity also covers Gmail web notifications. It may
+    // include other Chrome site notifications, which are useful event sources too.
+    if (/^Chrome(?:\.|$)/i.test(id) || /Google Chrome/i.test(name)) return 'Chrome';
+    if (/gmail/i.test(`${name} ${id}`)) return 'Gmail';
+    return null;
+  } catch { return null; }
 }
 
-async function readTeamsNotifications() {
+async function readNotifications() {
   const list = await listener.getNotificationsAsync(NotificationKinds.Toast);
   for (let i = 0; i < list.size; i += 1) {
     const item = list.getAt(i);
-    if (!item || !isTeams(item.appInfo) || known.has(item.id)) continue;
+    const source = item ? notificationSource(item.appInfo) : null;
+    if (!item || !source || known.has(item.id)) continue;
     known.add(item.id);
     const app = item.appInfo.displayInfo.displayName || 'Microsoft Teams';
     const binding = item.notification?.visual?.getBinding('ToastGeneric');
@@ -59,8 +65,8 @@ async function readTeamsNotifications() {
     const body = [...new Set(textParts)].join('\n');
     if (!body) continue;
     parentPort.postMessage({
-      type: 'teams-notification',
-      notification: { id: String(item.id), app, body, receivedAt: new Date().toISOString() },
+      type: 'calendar-notification',
+      notification: { id: String(item.id), app, source, body, receivedAt: new Date().toISOString() },
     });
     if (latest) latest.text = `${app}\n${body}`;
   }
@@ -69,11 +75,11 @@ async function readTeamsNotifications() {
 function activateListener() {
   const access = listener.getAccessStatus();
   if (access === 1) {
-    setStatus('許可済み · Teamsの通知を監視しています');
+    setStatus('許可済み · Teams / Chrome の通知を監視しています');
     listener.onNotificationChanged(() => {
-      readTeamsNotifications().catch(reportError);
+      readNotifications().catch(reportError);
     });
-    readTeamsNotifications().catch(reportError);
+    readNotifications().catch(reportError);
     parentPort.postMessage({ type: 'access', status: 'allowed' });
     return;
   }
@@ -82,7 +88,7 @@ function activateListener() {
     parentPort.postMessage({ type: 'access', status: 'denied' });
     return;
   }
-  setStatus('「通知を許可」を押してTeams通知の読み取りを開始してください');
+    setStatus('「通知を許可」を押してTeams / Chrome通知の読み取りを開始してください');
 }
 
 Application.start(() => {
@@ -90,16 +96,16 @@ Application.start(() => {
     app = Application.create(() => {
       try {
         const window = new Window();
-        window.title = 'Teams Calendar · 通知連携';
+        window.title = 'Calendar · 通知連携';
         const root = new Grid();
         root.padding = { left: 28, top: 24, right: 28, bottom: 24 };
         const content = new StackPanel();
         content.orientation = Orientation.Vertical;
         content.spacing = 14;
         content.verticalAlignment = VerticalAlignment.Center;
-        const eyebrow = text('TEAMS CALENDAR / LOCAL', 11, 600);
+        const eyebrow = text('CALENDAR / LOCAL', 11, 600);
         const heading = text('通知を予定に取り込む', 26, 600);
-        const explanation = text('このPC上でTeamsのWindows通知だけを読み取ります。通知本文は外部サーバーに送信しません。', 13);
+        const explanation = text('このPC上のTeamsとChromeのWindows通知を読み取ります。GmailはChrome通知を有効にしてください。通知本文は外部サーバーに送信しません。', 13);
         status = text('アクセス状態を確認しています…', 12);
         const permission = new Button();
         permission.content = text('通知を許可', 13, 600);
@@ -107,7 +113,7 @@ Application.start(() => {
         const openCalendar = new Button();
         openCalendar.content = text('カレンダーを開く', 13, 600);
         openCalendar.horizontalAlignment = HorizontalAlignment.Left;
-        latest = text('Teamsの通知がここに表示されます。', 12);
+        latest = text('Teams / Chrome の通知がここに表示されます。', 12);
         children(content, eyebrow, heading, explanation, status, permission, openCalendar, latest);
         children(root, content);
         window.content = root;

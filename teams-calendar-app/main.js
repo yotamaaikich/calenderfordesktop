@@ -36,12 +36,12 @@ const server = http.createServer((req, res) => {
 
 const worker = new Worker(path.join(__dirname, 'winui-worker.js'));
 worker.on('message', (message) => {
-  if (message?.type === 'teams-notification') {
+  if (message?.type === 'calendar-notification') {
     notifications.push({ ...message.notification, sequence: (notifications.at(-1)?.sequence || 0) + 1 });
     if (notifications.length > 200) notifications.shift();
-    console.log(`Teams notification received: ${message.notification.app}`);
+    console.log(`${message.notification.source} notification received: ${message.notification.app}`);
   } else if (message?.type === 'ready') {
-    console.log('Teams Calendar is ready.');
+    console.log('Calendar is ready.');
   } else if (message?.type === 'open-calendar') {
     openCalendar();
   } else if (message?.type === 'access') {

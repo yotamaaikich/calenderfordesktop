@@ -1,10 +1,10 @@
-# Teams Task Calendar
+# Notification Calendar
 
-A Windows desktop companion that reads Microsoft Teams' Windows toast notifications locally and forwards their text to the calendar page served on `127.0.0.1`. It uses the Windows User Notification Listener API and never sends notification content to Google Cloud or any remote service.
+A Windows desktop companion that collects Microsoft Teams and Chrome toast notifications locally and turns their text into calendar candidates. Gmail website notifications arrive through Chrome when Gmail and Chrome site notifications are enabled. Notification text stays on this PC; the app does not send it to Google Cloud or another remote service.
 
 ## First-time setup
 
-Requirements: Windows 10 2004 (build 19041) or later, Node.js 20+, Windows Developer Mode, and Microsoft Teams notifications enabled in Windows.
+Requirements: Windows 10 2004 (build 19041) or later, Node.js 20+, Windows Developer Mode, and Teams / Chrome notifications enabled in Windows.
 
 In PowerShell, run:
 
@@ -13,13 +13,19 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\prepare-local.ps1
 ```
 
-The script installs the Microsoft Windows App SDK metadata and Node dependencies, registers a local development package identity for notification access, creates a **Teams Calendar** desktop shortcut, and starts the app. If Windows prompts for notification access, allow it. The companion window displays whether the listener is active; close it to stop listening.
+The script installs the Microsoft Windows App SDK metadata and Node dependencies, registers a local development package identity for notification access, creates a **Teams Calendar** desktop shortcut, and starts the app. Allow notification access when Windows asks.
 
-## Data flow
+For Gmail, sign in to Gmail in Chrome and enable site notifications in Gmail and Chrome. Browser notifications are identified as Chrome; this can include notifications from other Chrome sites too.
 
-`UserNotificationListener` reads active Windows toast notifications. The app accepts notifications whose Windows app name contains `Teams`, plus the Microsoft Teams Chrome PWA AppUserModelId (`Chrome._crx_ompifglnodjjndh`). This covers the PWA installed in the Chrome profile used on the development PC. The app serves the calendar at `http://127.0.0.1:43187`; both the API and UI bind to loopback only. Notification messages are kept in memory until the calendar page receives them. Calendar entries are stored in the browser's local storage.
+## What it can read
 
-Notifications without a date stay as candidates with a date picker. Date extraction supports Japanese relative dates, weekdays, and common numeric date formats; a human still reviews every candidate before it becomes a calendar entry. The listener sees notifications that Windows and Teams actually generate; it cannot read every message in a muted chat or bypass Teams/Windows notification settings.
+The listener reads notifications that Windows exposes to `UserNotificationListener`. It can only process notifications that Teams / Chrome actually sends to Windows and keeps available to the listener. Muted chats, disabled notifications, or messages already dismissed from Windows may not be available. It does not currently search old Teams channel history.
+
+The calendar runs at `http://127.0.0.1:43187`; its API and UI bind to loopback only. New notifications are buffered in memory, and calendar entries are stored in the browser's local storage. Dates are extracted from Japanese relative dates, weekdays, and common numeric date formats. Review each candidate before adding it as a calendar entry; candidates without a date remain pending for manual date selection.
+
+## Teams channel history
+
+Reading existing channel posts requires a separate Microsoft Graph connection using a work or school account. Microsoft Graph lists `ChannelMessage.Read.All` as the least-privileged delegated permission for channel messages, and does not support this endpoint for personal Microsoft accounts. School tenant consent or administrator policy may also be required. The current notification-only app does not request this permission or access channel history.
 
 ## Restart / remove
 
