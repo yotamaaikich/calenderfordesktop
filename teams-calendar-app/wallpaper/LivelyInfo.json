@@ -1,0 +1,14 @@
+{
+  "AppVersion": "1.0.0.0",
+  "Title": "Notification Calendar",
+  "Thumbnail": null,
+  "Preview": null,
+  "Desc": "Interactive local calendar for the Windows desktop",
+  "Author": "Notification Calendar",
+  "License": "Local personal use",
+  "Contact": null,
+  "Type": 1,
+  "FileName": "index.html",
+  "Arguments": null,
+  "IsAbsolutePath": false
+}

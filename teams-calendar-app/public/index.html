@@ -55,6 +55,20 @@
     .candidate input[type=date]{display:block;width:100%;margin-top:8px;border:1px solid var(--line-bright);border-radius:0;padding:7px;background:#0c100d;color:var(--text);font:10px var(--mono)}.candidate button:disabled{opacity:.45;cursor:not-allowed}
     @media(max-width:900px){.layout{grid-template-columns:1fr}.day{min-height:88px}.app{padding:20px 16px}.side{display:grid;grid-template-columns:1fr 1fr}}
     @media(max-width:600px){.app{padding:14px 10px}.side{display:flex}.calendar{padding:12px}.day{min-height:74px;padding:5px 3px}.event{font-size:9px;padding:3px}.empty{display:none}.top{margin-bottom:15px}.today{font-size:10px;padding:7px 9px}.month-title{font-size:17px}.system-meta{display:none}}
+    body.wallpaper-mode{height:100vh;overflow:hidden}
+    body.wallpaper-mode .app{height:100vh;max-width:none;display:flex;flex-direction:column;padding:20px 28px 16px}
+    body.wallpaper-mode .top{flex:none}
+    body.wallpaper-mode .layout{flex:1;min-height:0;grid-template-columns:minmax(0,1.7fr) minmax(340px,.9fr)}
+    body.wallpaper-mode .calendar{min-height:0;display:flex;flex-direction:column}
+    body.wallpaper-mode .days{flex:1;min-height:0;grid-template-rows:repeat(6,minmax(0,1fr))}
+    body.wallpaper-mode .day{min-height:0}
+    body.wallpaper-mode .side{min-height:0;overflow:hidden}
+    body.wallpaper-mode .capture{flex:0 0 40%;min-height:0;overflow:auto}
+    body.wallpaper-mode .upcoming{flex:1;min-height:0;overflow:auto}
+    body.wallpaper-mode .up-item{padding:6px 0}
+    @media(max-height:850px){body.wallpaper-mode .capture{flex-basis:34%}.capture textarea{min-height:88px}}
+    @media(max-width:1050px){body.wallpaper-mode .app{padding:14px}.layout{grid-template-columns:minmax(0,1.4fr) minmax(300px,.9fr);gap:12px}.calendar{padding:14px}.day{min-height:78px}}
+    @media(max-width:720px){body.wallpaper-mode{overflow:auto;height:auto}body.wallpaper-mode .app{height:auto;min-height:100vh}.layout{display:flex;flex-direction:column}.calendar{min-height:560px}.side{overflow:visible!important}.capture{flex:none!important}.upcoming{max-height:38vh}}
   </style>
 </head>
 <body>
@@ -67,7 +81,7 @@
   </main><div class="toast" id="toast"></div>
   <script>
   (()=>{
-    const $=id=>document.getElementById(id), today=new Date(); let cursor=new Date(today.getFullYear(),today.getMonth(),1);
+    const $=id=>document.getElementById(id), today=new Date(); const wallpaperMode=new URLSearchParams(location.search).get('wallpaper')==='1';if(wallpaperMode)document.body.classList.add('wallpaper-mode');let cursor=new Date(today.getFullYear(),today.getMonth(),1);
     let items=[]; try{items=JSON.parse(localStorage.getItem('notice-calendar-items')||'[]')}catch{}
     const candidates=new Map();let lastNotification=0;
     const pad=n=>String(n).padStart(2,'0'), key=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -85,7 +99,7 @@
       }
       renderUpcoming();
     }
-    function renderUpcoming(){const list=$('upcomingList');list.innerHTML='';const upcoming=[...items].sort((a,b)=>a.date.localeCompare(b.date)).slice(0,8);if(!upcoming.length){list.innerHTML='<div class="empty-up">通知文から候補を作ると、ここに表示されます。</div>';return}
+    function renderUpcoming(){const list=$('upcomingList');list.innerHTML='';const sorted=[...items].sort((a,b)=>a.date.localeCompare(b.date));const upcoming=wallpaperMode?sorted:sorted.slice(0,8);if(!upcoming.length){list.innerHTML='<div class="empty-up">通知文から候補を作ると、ここに表示されます。</div>';return}
       upcoming.forEach((x,i)=>{const d=new Date(x.date+'T00:00:00'), row=document.createElement('div');row.className='up-item';const date=document.createElement('div');date.className='up-date';date.innerHTML=`${d.getMonth()+1}月<b>${d.getDate()}</b>`;const desc=document.createElement('div');desc.className='up-desc';const strong=document.createElement('strong');strong.textContent=x.title;const span=document.createElement('span');span.textContent=`${x.type} · ${x.date}`;desc.append(strong,span);const del=document.createElement('button');del.className='del';del.textContent='×';del.title='削除';del.onclick=()=>{items.splice(items.indexOf(x),1);save();render()};row.append(date,desc,del);list.append(row)})}
     function findDate(text){let m=text.match(/(20\d{2})[年\/.\-](\d{1,2})[月\/.\-](\d{1,2})日?/);if(m)return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
       m=text.match(/(\d{1,2})月(\d{1,2})日/);if(m){let year=today.getFullYear();if(+m[1]<today.getMonth()+1-1)year++;return `${year}-${pad(+m[1])}-${pad(+m[2])}`}
