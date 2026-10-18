@@ -14,7 +14,14 @@ if (!dynwinrt.hasPackageIdentity()) dynwinrt.initWinappsdk(2, 2);
 
 const port = Number(process.env.PORT || 43187);
 const page = path.join(__dirname, 'public', 'index.html');
+const calendarFile = path.join(process.env.LOCALAPPDATA || __dirname, 'NotificationCalendar', 'calendar.json');
 const notifications = [];
+let worker;
+
+function readCalendar() {
+  try { return JSON.parse(fs.readFileSync(calendarFile, 'utf8')); }
+  catch { return []; }
+}
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${port}`);
@@ -30,11 +37,35 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ items, latest: notifications.at(-1)?.sequence || after }));
     return;
   }
+  if (url.pathname === '/api/calendar' && req.method === 'GET') {
+    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(JSON.stringify(readCalendar()));
+    return;
+  }
+  if (url.pathname === '/api/calendar' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; if (body.length > 1_000_000) req.destroy(); });
+    req.on('end', () => {
+      try {
+        const submittedItems = JSON.parse(body);
+        if (!Array.isArray(submittedItems) || submittedItems.length > 500 || submittedItems.some((x) => !/^\d{4}-\d{2}-\d{2}$/.test(x.date) || typeof x.title !== 'string' || typeof x.type !== 'string')) throw new Error('Invalid calendar data');
+        const items = [...new Map(submittedItems.map((x) => [`${x.date}|${x.type}|${x.title}`, x])).values()];
+        fs.mkdirSync(path.dirname(calendarFile), { recursive: true });
+        fs.writeFileSync(calendarFile, JSON.stringify(items, null, 2), 'utf8');
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+        res.end(JSON.stringify(items));
+      } catch {
+        res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end('Invalid calendar data');
+      }
+    });
+    return;
+  }
   res.writeHead(404);
   res.end('Not found');
 });
 
-const worker = new Worker(path.join(__dirname, 'winui-worker.js'));
+worker = new Worker(path.join(__dirname, 'winui-worker.js'));
 worker.on('message', (message) => {
   if (message?.type === 'calendar-notification') {
     notifications.push({ ...message.notification, sequence: (notifications.at(-1)?.sequence || 0) + 1 });

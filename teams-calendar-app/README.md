@@ -21,7 +21,7 @@ For Gmail, sign in to Gmail in Chrome and enable site notifications in Gmail and
 
 The listener reads notifications that Windows exposes to `UserNotificationListener`. It can only process notifications that Teams / Chrome actually sends to Windows and keeps available to the listener. Muted chats, disabled notifications, or messages already dismissed from Windows may not be available. It does not currently search old Teams channel history.
 
-The calendar runs at `http://127.0.0.1:43187`; its API and UI bind to loopback only. New notifications are buffered in memory, and calendar entries are stored in the browser's local storage. Dates are extracted from Japanese relative dates, weekdays, and common numeric date formats. Review each candidate before adding it as a calendar entry; candidates without a date remain pending for manual date selection.
+The calendar runs at `http://127.0.0.1:43187`; its API and UI bind to loopback only. Calendar entries stay in browser local storage and are copied to `%LOCALAPPDATA%\NotificationCalendar\calendar.json` so the desktop widget can display them. This file stays on the PC and is not committed to Git. The widget is a small always-on-top window; close it with the app, then reopen the app from the desktop shortcut. Dates are extracted from Japanese relative dates, weekdays, and common numeric date formats. Review each candidate before adding it as a calendar entry; candidates without a date remain pending for manual date selection.
 
 ## Teams channel history
 

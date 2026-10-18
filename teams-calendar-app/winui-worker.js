@@ -1,8 +1,10 @@
 const { parentPort } = require('node:worker_threads');
+const fs = require('node:fs');
+const path = require('node:path');
 const { roInitialize } = require('@microsoft/dynwinrt');
 const {
-  Application, Button, Grid, HorizontalAlignment, Orientation,
-  StackPanel, TextBlock, TextWrapping, VerticalAlignment, Window,
+  Application, AppWindowPresenterKind, Button, Grid, HorizontalAlignment, Orientation,
+  DispatchingDispatcherQueue, ScrollViewer, StackPanel, TextBlock, TextWrapping, VerticalAlignment, Window,
 } = require('#winapp/bindings');
 const { UserNotificationListener, NotificationKinds } = require('#winapp/bindings');
 
@@ -11,6 +13,9 @@ let app;
 let listener;
 let status;
 let latest;
+let agenda;
+let agendaStatus;
+let calendarFile;
 const known = new Set();
 
 function children(panel, ...items) {
@@ -91,21 +96,42 @@ function activateListener() {
     setStatus('「通知を許可」を押してTeams / Chrome通知の読み取りを開始してください');
 }
 
+function refreshAgenda() {
+  try { displayAgenda(JSON.parse(fs.readFileSync(calendarFile, 'utf8'))); }
+  catch { agendaStatus.text = 'カレンダーの同期を待っています…'; }
+}
+
+function displayAgenda(items = []) {
+  try {
+    const ordered = [...items].sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title, 'ja'));
+    agenda.text = ordered.length
+      ? ordered.map((item) => {
+        const date = new Date(`${item.date}T00:00:00`);
+        const day = `${date.getMonth() + 1}/${date.getDate()} (${['日', '月', '火', '水', '木', '金', '土'][date.getDay()]})`;
+        return `${day}  ·  ${item.type || '予定'}\n${item.title}`;
+      }).join('\n\n')
+      : '予定はまだ登録されていません。\nカレンダーに文章を取り込むと、ここに表示されます。';
+    agendaStatus.text = `登録済み ${items.length} 件 · 5秒ごとに更新`;
+  } catch {
+    agendaStatus.text = '予定を表示できませんでした。';
+  }
+}
+
 Application.start(() => {
   try {
     app = Application.create(() => {
       try {
         const window = new Window();
-        window.title = 'Calendar · 通知連携';
+        window.title = 'Notification Calendar · デスクトップウィジェット';
         const root = new Grid();
-        root.padding = { left: 28, top: 24, right: 28, bottom: 24 };
+        root.padding = { left: 20, top: 16, right: 20, bottom: 14 };
         const content = new StackPanel();
         content.orientation = Orientation.Vertical;
         content.spacing = 14;
         content.verticalAlignment = VerticalAlignment.Center;
         const eyebrow = text('CALENDAR / LOCAL', 11, 600);
-        const heading = text('通知を予定に取り込む', 26, 600);
-        const explanation = text('このPC上のTeamsとChromeのWindows通知を読み取ります。GmailはChrome通知を有効にしてください。通知本文は外部サーバーに送信しません。', 13);
+        const heading = text('デスクトップカレンダー', 21, 600);
+        const explanation = text('Teams / Chrome の通知から登録した予定を表示しています。内容はこのPC内に保存されます。', 12);
         status = text('アクセス状態を確認しています…', 12);
         const permission = new Button();
         permission.content = text('通知を許可', 13, 600);
@@ -113,10 +139,16 @@ Application.start(() => {
         const openCalendar = new Button();
         openCalendar.content = text('カレンダーを開く', 13, 600);
         openCalendar.horizontalAlignment = HorizontalAlignment.Left;
-        latest = text('Teams / Chrome の通知がここに表示されます。', 12);
-        children(content, eyebrow, heading, explanation, status, permission, openCalendar, latest);
+        latest = text('Teams / Chrome の通知がここに表示されます。', 11);
+        agendaStatus = text('予定を読み込んでいます…', 11, 600);
+        agenda = text('予定を読み込んでいます…', 13);
+        const scroll = new ScrollViewer();
+        scroll.height = 430;
+        scroll.content = agenda;
+        children(content, eyebrow, heading, explanation, agendaStatus, scroll, status, permission, openCalendar, latest);
         children(root, content);
         window.content = root;
+        window.appWindow.setPresenter(AppWindowPresenterKind.CompactOverlay);
         permission.onClick(async () => {
           try {
             setStatus('Windowsの許可を待っています…');
@@ -129,11 +161,17 @@ Application.start(() => {
         window.onClosed(() => Application.current?.exit());
         root.onceLoaded(() => {
           const scale = root.xamlRoot?.rasterizationScale ?? 1;
-          window.appWindow.resize({ width: Math.round(620 * scale), height: Math.round(430 * scale) });
+          window.appWindow.resize({ width: Math.round(430 * scale), height: Math.round(720 * scale) });
         });
         listener = UserNotificationListener.current;
         if (!listener) throw new Error('Windows notification listener is unavailable. Start through the packaged setup script.');
+        calendarFile = path.join(process.env.LOCALAPPDATA || process.cwd(), 'NotificationCalendar', 'calendar.json');
         activateListener();
+        refreshAgenda();
+        const refreshTimer = DispatchingDispatcherQueue.getForCurrentThread().createTimer();
+        refreshTimer.interval = { duration: 50000000n };
+        refreshTimer.onTick(refreshAgenda);
+        refreshTimer.start();
         window.activate();
         parentPort.postMessage({ type: 'ready' });
       } catch (error) { reportError(error); Application.current?.exit(); }
