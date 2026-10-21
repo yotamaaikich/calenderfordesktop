@@ -17,7 +17,7 @@ Open this directory in Android Studio (Ladybug or newer), let Gradle sync, then 
 
 ## Optional free account and sync setup
 
-The Firebase Spark plan does not require billing details. Create a Firebase project without starting the Google Cloud free trial, enable **Authentication > Email/Password**, and create a **Cloud Firestore** database. Register an Android app with package name `jp.yotamaaikich.notificationcalendar`, download `google-services.json`, and place it at `app/google-services.json` before building the APK. Register a Web app in the same project and save its `apiKey` and `projectId` as `%LOCALAPPDATA%\NotificationCalendar\firebase-web-config.json` on Windows:
+The Firebase Spark plan does not require billing details. Create a Firebase project without starting the Google Cloud free trial, enable **Authentication > Email/Password**, and create a **Cloud Firestore** database. Register an Android app with package name `jp.yotamaaikich.notificationcalendar` and download `google-services.json`. For GitHub Actions builds, base64-encode that file and add the result as the repository Actions secret `GOOGLE_SERVICES_JSON_BASE64`; the workflow writes it only during the build. Register a Web app in the same project and save its `apiKey` and `projectId` as `%LOCALAPPDATA%\NotificationCalendar\firebase-web-config.json` on Windows:
 
 ```json
 {"apiKey":"YOUR_WEB_API_KEY","projectId":"YOUR_FIREBASE_PROJECT_ID"}

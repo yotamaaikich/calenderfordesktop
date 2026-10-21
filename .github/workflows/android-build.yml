@@ -25,6 +25,17 @@ jobs:
           packages: platform-tools
       - name: Install Android SDK packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Configure Firebase
+        working-directory: android-calendar
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        shell: bash
+        run: |
+          if [[ -z "$GOOGLE_SERVICES_JSON_BASE64" ]]; then
+            echo "::error::Add the GOOGLE_SERVICES_JSON_BASE64 Actions secret to enable Firebase in the Android build."
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
       - name: Build debug APK
         working-directory: android-calendar
         shell: bash

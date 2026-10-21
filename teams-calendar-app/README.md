@@ -31,7 +31,7 @@ To share calendar entries with the Android companion while the PC is off, use a 
 {"apiKey":"YOUR_WEB_API_KEY","projectId":"YOUR_FIREBASE_PROJECT_ID"}
 ```
 
-Set Firestore rules to the repository's `firestore.rules`. Register an Android app with package `jp.yotamaaikich.notificationcalendar`, download `google-services.json` into `android-calendar/app/`, and rebuild/reinstall that APK. Create or use the same email/password account on the phone and PC. The app only syncs calendar events; it does not upload the notification inbox. Firestore event records live under each user's UID and the provided rules restrict access to that same UID. Without config, the calendar continues to work locally.
+Set Firestore rules to the repository's `firestore.rules`. Register an Android app with package `jp.yotamaaikich.notificationcalendar`. To let GitHub Actions build the Firebase-enabled APK, base64-encode `google-services.json` and store it as the repository Actions secret `GOOGLE_SERVICES_JSON_BASE64`. Create or use the same email/password account on the phone and PC. The app only syncs calendar events; it does not upload the notification inbox. Firestore event records live under each user's UID and the provided rules restrict access to that same UID. Without config, the calendar continues to work locally.
 
 ## Teams channel history
 
