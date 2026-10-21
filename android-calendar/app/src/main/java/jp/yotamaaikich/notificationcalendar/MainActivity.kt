@@ -67,12 +67,12 @@ class MainActivity : Activity() {
         emailInput = EditText(this).apply {
             hint = "メールアドレス"
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-            singleLine = true
+            setSingleLine(true)
         }
         passwordInput = EditText(this).apply {
             hint = "パスワード（8文字以上）"
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            singleLine = true
+            setSingleLine(true)
         }
         content.addView(emailInput)
         content.addView(passwordInput)
