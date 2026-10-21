@@ -27,7 +27,14 @@ jobs:
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Build debug APK
         working-directory: android-calendar
-        run: bash ./gradlew --no-daemon :app:assembleDebug
+        shell: bash
+        run: |
+          set +e
+          bash ./gradlew --no-daemon :app:assembleDebug --stacktrace > build.log 2>&1
+          result=$?
+          tail -n 100 build.log >> "$GITHUB_STEP_SUMMARY"
+          cat build.log
+          exit "$result"
       - name: Publish one installable preview APK
         if: github.event_name == 'push' && github.ref == 'refs/heads/codex/android-notification-listener' && github.run_number == 6
         working-directory: android-calendar
