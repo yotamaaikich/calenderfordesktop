@@ -23,16 +23,24 @@ try {
   & '.\node_modules\.bin\winapp.cmd' create-debug-identity $identityNode --manifest '.\Package.appxmanifest' --keep-identity
   if ($LASTEXITCODE -ne 0) { throw 'Package identity setup failed. Check the CLI output above, the app manifest, and Windows Developer Mode.' }
 
-  $desktop = [Environment]::GetFolderPath('Desktop')
-  $shortcutPath = Join-Path $desktop 'Teams Calendar.lnk'
+  $powerShellPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+  if (-not (Test-Path $powerShellPath)) { throw "Windows PowerShell was not found: $powerShellPath" }
+  $shortcutArguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$appRoot\launch.ps1`""
+  $shortcutTargets = @(
+    (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Teams Calendar.lnk'),
+    (Join-Path ([Environment]::GetFolderPath('Startup')) 'Teams Calendar.lnk')
+  )
   $shell = New-Object -ComObject WScript.Shell
-  $shortcut = $shell.CreateShortcut($shortcutPath)
-  $shortcut.TargetPath = (Get-Command powershell.exe).Source
-  $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$appRoot\launch.ps1`""
-  $shortcut.WorkingDirectory = $appRoot
-  $shortcut.Description = 'Open the local Teams notification calendar'
-  $shortcut.Save()
-  Write-Host "Setup complete. Desktop shortcut created: $shortcutPath"
+  foreach ($shortcutPath in $shortcutTargets) {
+    $shortcut = $shell.CreateShortcut($shortcutPath)
+    $shortcut.TargetPath = $powerShellPath
+    $shortcut.Arguments = $shortcutArguments
+    $shortcut.WorkingDirectory = $appRoot
+    $shortcut.Description = 'Open the local Teams notification calendar'
+    $shortcut.Save()
+  }
+  Write-Host "Setup complete. Desktop shortcut created: $($shortcutTargets[0])"
+  Write-Host "Automatic sign-in startup shortcut created: $($shortcutTargets[1])"
   Write-Host 'Starting the app. Click 通知を許可 in the Teams Calendar window when Windows asks.'
   & '.\launch.ps1'
 }

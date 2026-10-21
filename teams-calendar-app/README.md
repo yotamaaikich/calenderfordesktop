@@ -13,7 +13,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\prepare-local.ps1
 ```
 
-The script installs the Microsoft Windows App SDK metadata and Node dependencies, registers a local development package identity for notification access, creates a **Teams Calendar** desktop shortcut, and starts the app. Allow notification access when Windows asks.
+The script installs the Microsoft Windows App SDK metadata and Node dependencies, registers a local development package identity for notification access, creates a **Teams Calendar** desktop shortcut and a Windows Startup shortcut, then starts the app. The calendar will start automatically after you sign in to Windows. Allow notification access when Windows asks.
 
 For Gmail, sign in to Gmail in Chrome and enable site notifications in Gmail and Chrome. Browser notifications are identified as Chrome; this can include notifications from other Chrome sites too.
 
@@ -29,6 +29,6 @@ Reading existing channel posts requires a separate Microsoft Graph connection us
 
 ## Restart / remove
 
-Use the desktop shortcut to start the calendar and listener. Closing the **Teams Calendar** native window stops the app. To remove the desktop shortcut, delete `Teams Calendar.lnk`; to unregister the local development identity, run `npx winapp unregister` from this directory.
+Use the desktop shortcut to start the calendar and listener. Closing the **Teams Calendar** native window stops the app. To remove automatic startup, delete `Teams Calendar.lnk` from the Windows Startup folder; to remove the desktop shortcut, delete the desktop copy of `Teams Calendar.lnk`; to unregister the local development identity, run `npx winapp unregister` from this directory.
 
 This is a source-based local install, not a signed public installer. No Google Cloud account or billing setup is used.
