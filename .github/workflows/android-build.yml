@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -28,6 +28,17 @@ jobs:
       - name: Build debug APK
         working-directory: android-calendar
         run: bash ./gradlew --no-daemon :app:assembleDebug
+      - name: Publish one installable preview APK
+        if: github.event_name == 'push' && github.ref == 'refs/heads/codex/android-notification-listener' && github.run_number == 4
+        working-directory: android-calendar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create android-preview-0.1.0
+          app/build/outputs/apk/debug/app-debug.apk
+          --prerelease
+          --title "Notification Calendar Android 0.1.0 Preview"
+          --notes "Personal debug build for installing on the connected Android phone. Notification text stays on the device."
       - uses: actions/upload-artifact@v4
         with:
           name: notification-calendar-android-debug
