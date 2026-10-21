@@ -102,7 +102,7 @@ class MainActivity : Activity() {
             val text = label(display, 14f)
             card.addView(text)
             val button = Button(this).apply {
-                text = if (notice.guessedDate == null) "日付を選んで予定に追加" else "${formatDate(notice.guessedDate)} の予定に追加"
+                this.text = if (notice.guessedDate == null) "日付を選んで予定に追加" else "${formatDate(notice.guessedDate)} の予定に追加"
                 setOnClickListener {
                     val initial = notice.guessedDate?.let(LocalDate::parse) ?: LocalDate.now()
                     DatePickerDialog(this@MainActivity, { _, year, month, day ->
