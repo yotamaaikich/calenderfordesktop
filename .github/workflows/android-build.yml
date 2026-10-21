@@ -33,6 +33,10 @@ jobs:
           bash ./gradlew --no-daemon :app:assembleDebug --stacktrace > build.log 2>&1
           result=$?
           tail -n 100 build.log >> "$GITHUB_STEP_SUMMARY"
+          if [ "$result" -ne 0 ]; then
+            diagnostics=$(grep -E '^(e:|FAILURE:|\* What went wrong:|Execution failed for task)' build.log | tail -n 12 | tr '\n' ' ')
+            echo "::error title=Gradle build diagnostics::$diagnostics"
+          fi
           cat build.log
           exit "$result"
       - name: Publish one installable preview APK
