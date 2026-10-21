@@ -8,9 +8,13 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
+import android.text.InputType
+import com.google.firebase.firestore.ListenerRegistration
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -20,6 +24,10 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var notices: LinearLayout
     private lateinit var agenda: LinearLayout
+    private lateinit var cloudStatus: TextView
+    private lateinit var emailInput: EditText
+    private lateinit var passwordInput: EditText
+    private var syncListener: ListenerRegistration? = null
     private val refresh = object : Runnable {
         override fun run() { render(); root.postDelayed(this, 2000) }
     }
@@ -53,6 +61,36 @@ class MainActivity : Activity() {
         content.addView(accessButton)
         val privacy = label("通知アクセスを許可すると、端末に届く通知を読み取れます。Teamsが仕事用プロファイルにある場合、Androidや学校の管理設定で読み取れないことがあります。", 12f)
         content.addView(privacy)
+        content.addView(section("ログイン・端末間同期"))
+        cloudStatus = label("Firebase設定を確認しています…", 13f)
+        content.addView(cloudStatus)
+        emailInput = EditText(this).apply {
+            hint = "メールアドレス"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            singleLine = true
+        }
+        passwordInput = EditText(this).apply {
+            hint = "パスワード（8文字以上）"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            singleLine = true
+        }
+        content.addView(emailInput)
+        content.addView(passwordInput)
+        val accountActions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        accountActions.addView(Button(this).apply {
+            text = "ログイン"
+            setOnClickListener { authenticate(create = false) }
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        accountActions.addView(Button(this).apply {
+            text = "新規登録"
+            setOnClickListener { authenticate(create = true) }
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        accountActions.addView(Button(this).apply {
+            text = "ログアウト"
+            setOnClickListener { CloudSync.auth(this@MainActivity)?.signOut(); stopCloudSync(); updateCloudStatus() }
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        content.addView(accountActions)
+        content.addView(label("同期するのは登録済み予定の日付・タイトル・元アプリだけです。通知本文は同期しません。", 12f))
         content.addView(section("予定カレンダー"))
         agenda = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         content.addView(agenda)
@@ -67,11 +105,61 @@ class MainActivity : Activity() {
         super.onResume()
         root.removeCallbacks(refresh)
         root.post(refresh)
+        updateCloudStatus()
+        connectCloudSync()
     }
 
     override fun onPause() {
         root.removeCallbacks(refresh)
+        stopCloudSync()
         super.onPause()
+    }
+
+    private fun authenticate(create: Boolean) {
+        val auth = CloudSync.auth(this)
+        if (auth == null) {
+            cloudStatus.text = "同期設定が未接続です。Firebase設定ファイルを追加してAPKを作り直す必要があります。"
+            return
+        }
+        val email = emailInput.text.toString().trim()
+        val password = passwordInput.text.toString()
+        if (email.isBlank() || password.length < 8) {
+            Toast.makeText(this, "メールアドレスと8文字以上のパスワードを入力してください", Toast.LENGTH_LONG).show()
+            return
+        }
+        val task = if (create) auth.createUserWithEmailAndPassword(email, password)
+            else auth.signInWithEmailAndPassword(email, password)
+        task.addOnCompleteListener(this) { result ->
+            if (result.isSuccessful) {
+                connectCloudSync()
+                updateCloudStatus()
+                render()
+            } else {
+                Toast.makeText(this, result.exception?.localizedMessage ?: "ログインできませんでした", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun updateCloudStatus() {
+        val auth = CloudSync.auth(this)
+        cloudStatus.text = when {
+            auth == null -> "同期設定待ち · Firebase Sparkのプロジェクト設定がまだありません"
+            auth.currentUser != null -> "ログイン済み · ${auth.currentUser?.email ?: ""}"
+            else -> "未ログイン · PCと同じアカウントでログインしてください"
+        }
+    }
+
+    private fun connectCloudSync() {
+        if (!CloudSync.configured(this) || CloudSync.auth(this)?.currentUser == null || syncListener != null) return
+        syncListener = CloudSync.start(this) { message -> runOnUiThread {
+            cloudStatus.text = message
+            render()
+        } }
+    }
+
+    private fun stopCloudSync() {
+        syncListener?.remove()
+        syncListener = null
     }
 
     private fun render() {
@@ -106,7 +194,14 @@ class MainActivity : Activity() {
                 setOnClickListener {
                     val initial = notice.guessedDate?.let(LocalDate::parse) ?: LocalDate.now()
                     DatePickerDialog(this@MainActivity, { _, year, month, day ->
-                        CalendarData.addEntry(this@MainActivity, notice, LocalDate.of(year, month + 1, day))
+                        val date = LocalDate.of(year, month + 1, day)
+                        val added = CalendarData.addEntry(this@MainActivity, notice, date)
+                        if (added) {
+                            val title = listOf(notice.title, notice.body).filter(String::isNotBlank).joinToString(" — ").take(180)
+                            CalendarData.entries(this@MainActivity).firstOrNull {
+                                it.date == date.toString() && it.title == title && it.source == notice.app
+                            }?.let { CloudSync.upload(this@MainActivity, it) }
+                        }
                         render()
                     }, initial.year, initial.monthValue - 1, initial.dayOfMonth).show()
                 }

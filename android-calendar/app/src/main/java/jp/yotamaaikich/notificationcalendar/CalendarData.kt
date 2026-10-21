@@ -65,6 +65,15 @@ object CalendarData {
             .sortedBy { it.date }
     } catch (_: Exception) { emptyList() }
 
+    fun mergeEntries(context: Context, incoming: List<CalendarEntry>) {
+        val merged = (entries(context) + incoming)
+            .distinctBy { "${it.date}|${it.title}|${it.source}" }
+            .sortedBy { it.date }
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(
+            ENTRIES, JSONArray().apply { merged.forEach { put(it.toJson()) } }.toString()
+        ).apply()
+    }
+
     fun addEntry(context: Context, notice: CapturedNotice, date: LocalDate = notice.guessedDate?.let(LocalDate::parse) ?: LocalDate.now()): Boolean {
         val title = listOf(notice.title, notice.body).filter(String::isNotBlank).joinToString(" — ").take(180)
         if (title.isBlank()) return false

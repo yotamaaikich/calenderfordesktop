@@ -15,6 +15,7 @@ if (!dynwinrt.hasPackageIdentity()) dynwinrt.initWinappsdk(2, 2);
 const port = Number(process.env.PORT || 43187);
 const page = path.join(__dirname, 'public', 'index.html');
 const calendarFile = path.join(process.env.LOCALAPPDATA || __dirname, 'NotificationCalendar', 'calendar.json');
+const firebaseConfigFile = path.join(process.env.LOCALAPPDATA || __dirname, 'NotificationCalendar', 'firebase-web-config.json');
 const notifications = [];
 let worker;
 
@@ -28,6 +29,19 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && url.pathname === '/') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
     fs.createReadStream(page).pipe(res);
+    return;
+  }
+  if (req.method === 'GET' && url.pathname === '/api/firebase-config') {
+    try {
+      const config = JSON.parse(fs.readFileSync(firebaseConfigFile, 'utf8'));
+      const safe = { apiKey: config.apiKey, projectId: config.projectId };
+      if (typeof safe.apiKey !== 'string' || typeof safe.projectId !== 'string') throw new Error('Invalid Firebase config');
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(JSON.stringify(safe));
+    } catch {
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      res.end('{}');
+    }
     return;
   }
   if (req.method === 'GET' && url.pathname === '/api/notifications') {

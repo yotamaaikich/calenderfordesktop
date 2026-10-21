@@ -3,4 +3,5 @@ teams-calendar-app/.winapp/
 teams-calendar-app/runtime/
 teams-calendar-app/logs/
 teams-calendar-app/work-*.log
+android-calendar/app/google-services.json
 work/
