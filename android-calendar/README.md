@@ -5,7 +5,7 @@ An Android companion that reads new notifications through Android's user-approve
 ## Current behavior
 
 - Can receive notifications from Teams, Gmail, Google Classroom, Discord, and other apps that post Android notifications.
-- Keeps the latest 300 notification texts in the app's private local storage.
+- Keeps the latest 100 notification texts in the app's private local storage. New notifications are sorted by received time, and the oldest items drop off automatically when the limit is reached.
 - Recognizes a few common Japanese and numeric date formats and displays a date candidate.
 - Requires a tap to create an event. If it cannot find a date, a date picker opens.
 - Notification bodies remain on the phone. Only an event the user adds to the calendar (date, title, source app) is synchronized when Firebase is configured and the user signs in.

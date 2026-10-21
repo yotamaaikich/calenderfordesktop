@@ -35,6 +35,7 @@ object CalendarData {
     private const val PREFS = "notification_calendar_local"
     private const val NOTICES = "notices"
     private const val ENTRIES = "entries"
+    private const val NOTICE_LIMIT = 100
     private val noticeDatePatterns = listOf(
         Regex("(?<!\\d)(20\\d{2})[年./-](\\d{1,2})[月./-](\\d{1,2})日?"),
         Regex("(?<!\\d)(\\d{1,2})月(\\d{1,2})日"),
@@ -43,14 +44,15 @@ object CalendarData {
 
     fun capture(context: Context, notice: CapturedNotice) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val items = readNotices(context).filterNot { it.id == notice.id }.toMutableList()
-        items.add(0, notice)
+        val items = (readNotices(context).filterNot { it.id == notice.id } + notice)
+            .sortedByDescending { it.receivedAt }
         prefs.edit().putString(NOTICES, JSONArray().apply {
-            items.take(300).forEach { put(it.toJson()) }
+            items.take(NOTICE_LIMIT).forEach { put(it.toJson()) }
         }.toString()).apply()
     }
 
     fun notices(context: Context): List<CapturedNotice> = readNotices(context)
+        .sortedByDescending { it.receivedAt }
 
     private fun readNotices(context: Context): List<CapturedNotice> = try {
         val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(NOTICES, "[]") ?: "[]"
