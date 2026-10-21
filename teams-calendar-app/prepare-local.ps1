@@ -23,6 +23,15 @@ try {
   & '.\node_modules\.bin\winapp.cmd' create-debug-identity $identityNode --manifest '.\Package.appxmanifest' --keep-identity
   if ($LASTEXITCODE -ne 0) { throw 'Package identity setup failed. Check the CLI output above, the app manifest, and Windows Developer Mode.' }
 
+  $livelyWallpaper = Join-Path $env:LOCALAPPDATA 'Lively Wallpaper\Library\wallpapers\notification-calendar'
+  if (Test-Path (Join-Path $env:ProgramFiles 'Lively Wallpaper\Lively.exe')) {
+    New-Item -ItemType Directory -Force -Path $livelyWallpaper | Out-Null
+    Copy-Item '.\wallpaper\index.html', '.\wallpaper\LivelyInfo.json' -Destination $livelyWallpaper -Force
+    Write-Host "Installed the calendar wallpaper in the Lively library: $livelyWallpaper"
+  } else {
+    Write-Host 'Lively Wallpaper was not found; the calendar app will still start normally.'
+  }
+
   $powerShellPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
   if (-not (Test-Path $powerShellPath)) { throw "Windows PowerShell was not found: $powerShellPath" }
   $shortcutArguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$appRoot\launch.ps1`""

@@ -13,7 +13,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\prepare-local.ps1
 ```
 
-The script installs the Microsoft Windows App SDK metadata and Node dependencies, registers a local development package identity for notification access, creates a **Teams Calendar** desktop shortcut and a Windows Startup shortcut, then starts the app. The calendar will start automatically after you sign in to Windows. Allow notification access when Windows asks.
+The script installs the Microsoft Windows App SDK metadata and Node dependencies, registers a local development package identity for notification access, creates a **Teams Calendar** desktop shortcut and a Windows Startup shortcut, then starts the app. If Lively Wallpaper is installed, setup also copies the interactive wallpaper into Lively's local library. After each sign-in, the launcher waits for the calendar's local server to respond and then reapplies the wallpaper, avoiding the connection-refused screen caused by startup order. Lively's own **Start with Windows** setting must be enabled; it is enabled on the current setup. Allow notification access when Windows asks.
 
 For Gmail, sign in to Gmail in Chrome and enable site notifications in Gmail and Chrome. Browser notifications are identified as Chrome; this can include notifications from other Chrome sites too.
 
