@@ -94,8 +94,7 @@ function openCalendar() {
 }
 
 server.listen(port, '127.0.0.1', () => {
-  openCalendar();
-  console.log(`Calendar opened at http://127.0.0.1:${port}`);
+  console.log(`Calendar server ready at http://127.0.0.1:${port}`);
 });
 
 function shutdown() {
