@@ -55,6 +55,8 @@
     .upcoming .section-title{margin-bottom:9px}.up-item{gap:9px;padding:8px 0;border-top:1px solid var(--line)}.up-date{width:39px;color:var(--dim);font:9px var(--mono)}.up-date b{color:var(--green);font:500 17px var(--mono)}.up-desc strong{color:var(--text);font-size:10px}.up-desc span{color:var(--dim);font:9px var(--mono)}.del{color:var(--dim)}.del:hover{color:#e38e80}.empty-up{color:var(--dim);font:10px/1.65 var(--mono)}.foot{margin-top:12px;color:var(--dim);font:9px var(--mono);text-align:left}.toast{border:1px solid var(--line-bright);border-radius:0;background:#0c100d;color:var(--green);font:11px var(--mono)}
     button:focus-visible,textarea:focus-visible{outline:2px solid var(--green);outline-offset:3px}
     .candidate input[type=date]{display:block;width:100%;margin-top:8px;border:1px solid var(--line-bright);border-radius:0;padding:7px;background:#0c100d;color:var(--text);font:10px var(--mono)}.candidate button:disabled{opacity:.45;cursor:not-allowed}
+    .up-actions{display:flex;gap:4px;margin-left:auto;align-self:center}.up-actions button{border:1px solid var(--line);background:transparent;color:var(--muted);padding:3px 6px;font:9px var(--mono);cursor:pointer}.up-actions button:hover{border-color:var(--green);color:var(--green)}.up-actions .del{margin:0;padding:0 3px;border:0;font-size:15px}
+    .event-editor{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px}.event-editor input,.event-editor select{min-width:0;width:100%;border:1px solid var(--line-bright);border-radius:0;background:#0c100d;color:var(--text);padding:6px;font:10px var(--sans)}.event-editor .edit-title{grid-column:1/-1}.edit-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:5px}.edit-actions button{border:1px solid var(--line-bright);border-radius:0;background:transparent;color:var(--muted);padding:5px 8px;font:9px var(--mono);cursor:pointer}.edit-actions .save-edit{border-color:var(--green);background:var(--green);color:var(--bg)}
     @media(max-width:900px){.layout{grid-template-columns:1fr}.day{min-height:88px}.app{padding:20px 16px}.side{display:grid;grid-template-columns:1fr 1fr}}
     @media(max-width:600px){.app{padding:14px 10px}.side{display:flex}.calendar{padding:12px}.day{min-height:74px;padding:5px 3px}.event{font-size:9px;padding:3px}.empty{display:none}.top{margin-bottom:15px}.today{font-size:10px;padding:7px 9px}.month-title{font-size:17px}.system-meta{display:none}}
     body.wallpaper-mode{height:100vh;overflow:hidden}
@@ -106,8 +108,34 @@
       }
       renderUpcoming();
     }
-    function renderUpcoming(){const list=$('upcomingList');list.innerHTML='';const sorted=[...items].sort((a,b)=>a.date.localeCompare(b.date));const upcoming=wallpaperMode?sorted:sorted.slice(0,8);if(!upcoming.length){list.innerHTML='<div class="empty-up">通知文から候補を作ると、ここに表示されます。</div>';return}
-      upcoming.forEach((x,i)=>{const d=new Date(x.date+'T00:00:00'), row=document.createElement('div');row.className='up-item';const date=document.createElement('div');date.className='up-date';date.innerHTML=`${d.getMonth()+1}月<b>${d.getDate()}</b>`;const desc=document.createElement('div');desc.className='up-desc';const strong=document.createElement('strong');strong.textContent=x.title;strong.title=x.title;const span=document.createElement('span');span.textContent=`${x.type} · ${x.date}`;desc.append(strong,span);const del=document.createElement('button');del.className='del';del.textContent='×';del.title='削除';del.onclick=()=>{items.splice(items.indexOf(x),1);save();render()};row.append(date,desc,del);list.append(row)})}
+    function renderUpcoming(){
+      const list=$('upcomingList');list.innerHTML='';
+      const sorted=[...items].sort((a,b)=>a.date.localeCompare(b.date));
+      const upcoming=wallpaperMode?sorted:sorted.slice(0,8);
+      if(!upcoming.length){list.innerHTML='<div class="empty-up">通知文から候補を作ると、ここに表示されます。</div>';return}
+      upcoming.forEach(x=>{
+        const d=new Date(x.date+'T00:00:00'), row=document.createElement('div');row.className='up-item';
+        const date=document.createElement('div');date.className='up-date';date.innerHTML=`${d.getMonth()+1}月<b>${d.getDate()}</b>`;
+        const desc=document.createElement('div');desc.className='up-desc';
+        const strong=document.createElement('strong');strong.textContent=x.title;strong.title=x.title;
+        const span=document.createElement('span');span.textContent=`${x.type} · ${x.date}`;desc.append(strong,span);
+        const actions=document.createElement('div');actions.className='up-actions';
+        const edit=document.createElement('button');edit.type='button';edit.textContent='編集';edit.setAttribute('aria-label',`予定を編集: ${x.title}`);
+        edit.onclick=()=>{
+          row.innerHTML='';const editor=document.createElement('div');editor.className='event-editor';
+          const dateInput=document.createElement('input');dateInput.type='date';dateInput.value=x.date;dateInput.setAttribute('aria-label','予定の日付');
+          const titleInput=document.createElement('input');titleInput.type='text';titleInput.value=x.title;titleInput.maxLength=500;titleInput.className='edit-title';titleInput.setAttribute('aria-label','予定のタイトル');
+          const typeInput=document.createElement('select');typeInput.setAttribute('aria-label','予定の種類');
+          for(const type of ['予定','課題']){const option=document.createElement('option');option.value=type;option.textContent=type;typeInput.append(option)}typeInput.value=x.type==='課題'?'課題':'予定';
+          const buttons=document.createElement('div');buttons.className='edit-actions';
+          const cancel=document.createElement('button');cancel.type='button';cancel.textContent='キャンセル';cancel.onclick=()=>render();
+          const saveEdit=document.createElement('button');saveEdit.type='button';saveEdit.className='save-edit';saveEdit.textContent='保存';saveEdit.onclick=()=>{if(!dateInput.value||!titleInput.value.trim()){toast('日付とタイトルを入力してください');return}x.date=dateInput.value;x.title=titleInput.value.trim();x.type=typeInput.value;save();render();toast('予定を更新しました')};
+          buttons.append(cancel,saveEdit);editor.append(dateInput,titleInput,typeInput,buttons);row.append(editor);titleInput.focus();
+        };
+        const del=document.createElement('button');del.className='del';del.textContent='×';del.title='削除';del.setAttribute('aria-label',`予定を削除: ${x.title}`);del.onclick=()=>{items.splice(items.indexOf(x),1);save();render()};
+        actions.append(edit,del);row.append(date,desc,actions);list.append(row);
+      });
+    }
     function findDate(text){let m=text.match(/(20\d{2})[年\/.\-](\d{1,2})[月\/.\-](\d{1,2})日?/);if(m)return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
       m=text.match(/(\d{1,2})月(\d{1,2})日/);if(m){let year=today.getFullYear();if(+m[1]<today.getMonth()+1-1)year++;return `${year}-${pad(+m[1])}-${pad(+m[2])}`}
       const offsets=[['明後日',2],['あさって',2],['明日',1],['あした',1],['今日',0],['本日',0]];for(const [word,n] of offsets){if(text.includes(word)){const d=new Date(today);d.setDate(d.getDate()+n);return key(d)}}
