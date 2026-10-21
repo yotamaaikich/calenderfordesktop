@@ -153,12 +153,13 @@ Application.start(() => {
           try {
             setStatus('Windowsの許可を待っています…');
             const result = await listener.requestAccessAsync();
-            if (result === 1) activateListener();
+            if (result === 1) { activateListener(); window.close(); }
             else setStatus('通知へのアクセスが許可されませんでした。Windowsの通知設定を確認してください。');
           } catch (error) { reportError(error); setStatus(`通知の許可に失敗しました: ${error.message || error}`); }
         });
         openCalendar.onClick(() => parentPort.postMessage({ type: 'open-calendar' }));
-        window.onClosed(() => Application.current?.exit());
+        // Closing the compact widget should leave notification monitoring alive.
+        window.onClosed(() => {});
         root.onceLoaded(() => {
           const scale = root.xamlRoot?.rasterizationScale ?? 1;
           window.appWindow.resize({ width: Math.round(430 * scale), height: Math.round(720 * scale) });
@@ -172,7 +173,8 @@ Application.start(() => {
         refreshTimer.interval = { duration: 50000000n };
         refreshTimer.onTick(refreshAgenda);
         refreshTimer.start();
-        window.activate();
+        // Keep the listener in the background once access has already been granted.
+        if (listener.getAccessStatus() !== 1) window.activate();
         parentPort.postMessage({ type: 'ready' });
       } catch (error) { reportError(error); Application.current?.exit(); }
     });
