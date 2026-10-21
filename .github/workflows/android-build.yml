@@ -29,7 +29,7 @@ jobs:
         working-directory: android-calendar
         run: bash ./gradlew --no-daemon :app:assembleDebug
       - name: Publish one installable preview APK
-        if: github.event_name == 'push' && github.ref == 'refs/heads/codex/android-notification-listener' && github.run_number == 4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/codex/android-notification-listener' && github.run_number == 6
         working-directory: android-calendar
         env:
           GH_TOKEN: ${{ github.token }}
